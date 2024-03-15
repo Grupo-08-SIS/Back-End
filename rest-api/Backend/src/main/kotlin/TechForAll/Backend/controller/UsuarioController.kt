@@ -74,6 +74,18 @@ class UsuarioController {
         return indice >= 0 && indice < listaUsuarios.size
     }
 
+ @PutMapping("/{id}")
+    fun atualizar(@PathVariable id: Long, @RequestBody usuarioAtualizado: Usuario): ResponseEntity<Any> {
+        val usuarioEncontrado = listaUsuarios.find { it.id == id }
+
+        return if (usuarioEncontrado != null) {
+            val indiceUsuarioEncontrado = listaUsuarios.indexOf(usuarioEncontrado)
+            listaUsuarios[indiceUsuarioEncontrado] = usuarioAtualizado.copy(id = id)
+            ResponseEntity.status(HttpStatus.OK).body("Usuário atualizado com sucesso")
+        } else {
+            ResponseEntity.status(HttpStatus.NOT_FOUND).body("Usuário não encontrado")
+        }
+    }
 
 
 
