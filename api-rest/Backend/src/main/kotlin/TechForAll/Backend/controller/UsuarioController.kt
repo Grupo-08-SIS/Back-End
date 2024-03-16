@@ -13,10 +13,16 @@ class UsuarioController {
     val listaUsuarios: MutableList<Usuario> = mutableListOf()
 
     @PostMapping
-    fun cadastrar(@RequestBody usuario: Usuario): ResponseEntity<Usuario> {
+    fun cadastrar(@RequestBody usuario: Usuario): ResponseEntity<Any> {
+
+        if (listaUsuarios.any { it.email == usuario.email }) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("E-mail já cadastrado")
+        }
+
+        val proximoId = Usuario.obterProximoId(listaUsuarios)
 
         val novoUsuario = Usuario(
-            id = usuario.id,
+            id  = proximoId,
             nome = usuario.nome,
             email = usuario.email,
             senha = usuario.senha,
@@ -36,27 +42,27 @@ class UsuarioController {
     @GetMapping()
     fun listar(): ResponseEntity<List<Usuario>> {
         if (listaUsuarios.isEmpty()) {
-            return ResponseEntity.status(204).build()
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).build()
         }
-        return ResponseEntity.status(200).body(listaUsuarios)
+        return ResponseEntity.status(HttpStatus.OK).body(listaUsuarios)
     }
 
     @GetMapping("/{id}")
     fun buscarPorId(@PathVariable id: Long): ResponseEntity<Usuario> {
         val usuarioEncontrado = listaUsuarios.find { it.id == id }
         if (usuarioEncontrado != null) {
-            return ResponseEntity.ok(usuarioEncontrado)
+            return  ResponseEntity.status(HttpStatus.OK).body(usuarioEncontrado)
         }
-        return ResponseEntity.notFound().build()
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).build()
     }
 
     @GetMapping("/tipousuario/{tipo}")
     fun buscarUsuariosPorTipo(@PathVariable tipo: Long): ResponseEntity<List<Usuario>> {
         val usuariosEncontrados = listaUsuarios.filter { it.tipoUsuario.toLong() == tipo }
         return if (usuariosEncontrados.isNotEmpty()) {
-            ResponseEntity.ok(usuariosEncontrados)
+            ResponseEntity.status(HttpStatus.OK).body(usuariosEncontrados)
         } else {
-            ResponseEntity.notFound().build()
+            ResponseEntity.status(HttpStatus.NOT_FOUND).build()
         }
     }
 
@@ -65,16 +71,16 @@ class UsuarioController {
         val usuarioEncontrado = listaUsuarios.find { it.id == id }   // Ou seja, será entregue só o status.
         if (usuarioEncontrado != null) {
             listaUsuarios.remove(usuarioEncontrado)
-            return ResponseEntity.noContent().build()
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).build()
         }
-        return ResponseEntity.notFound().build()
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).build()
     }
 
     fun existeUsuario(indice: Int): Boolean {
         return indice >= 0 && indice < listaUsuarios.size
     }
 
- @PutMapping("/{id}")
+    @PutMapping("/{id}")
     fun atualizar(@PathVariable id: Long, @RequestBody usuarioAtualizado: Usuario): ResponseEntity<Any> {
         val usuarioEncontrado = listaUsuarios.find { it.id == id }
 
@@ -86,6 +92,30 @@ class UsuarioController {
             ResponseEntity.status(HttpStatus.NOT_FOUND).body("Usuário não encontrado")
         }
     }
+
+    @PatchMapping("/{id}")
+    fun atualizarInformacao(@PathVariable id: Long, @RequestBody atualizacao: Map<String, Any>): ResponseEntity<Any> {
+        val usuarioEncontrado = listaUsuarios.find { it.id == id }
+        if (usuarioEncontrado != null) {
+            val camposValidos = setOf("nome", "email", "telefone", "senha")
+            for ((campo, valor) in atualizacao) {
+                if (camposValidos.contains(campo)) {
+                    when (campo) {
+                        "nome" -> usuarioEncontrado.nome = valor.toString()
+                        "email" -> usuarioEncontrado.email = valor.toString()
+                        "telefone" -> usuarioEncontrado.telefone = valor.toString().toLong()
+                        "senha" -> usuarioEncontrado.senha = valor.toString()
+                    }
+                } else {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Campo inválido: $campo")
+                }
+            }
+            return ResponseEntity.status(HttpStatus.OK).body("Informações do usuário atualizadas com sucesso")
+        }
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).build()
+    }
+
+
 
 
 
